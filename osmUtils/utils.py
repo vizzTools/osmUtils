@@ -1,10 +1,45 @@
 
 """General utility functions."""
-from . import settings
+from settings import DEFAULT_CRS, DEFAULT_TILES
 import geopandas as gpd
-from shapely.geometry import MultiPolygon, Polygon
+import pandas as pd
+import mercantile as mt
+from shapely.geometry import shape, MultiPolygon, Polygon
 
-def geometry_to_gdf(self, geometry, crs):
+def generate_tiles(crs, zoom):
+        """
+        Generate tiles for the manifest.
+        """
+
+        #generate tiles
+        tiles = []
+        
+        #calculate bbox for input geometry if geom is none:
+
+        for tile in mt.tiles(*DEFAULT_TILES, zoom, truncate=False):
+
+            tile_id = f"{tile.z}_{tile.x}_{tile.y}"
+
+            geom = mt.feature(tile)['geometry']
+            polygon = shape(geom)
+
+            tiles.append({
+                'tile_id': tile_id,
+                'geometry': polygon
+            })
+
+        # generate geodataframe with tiles
+        gdf = gpd.GeoDataFrame(tiles)
+        
+        #check projection 
+        if gdf.crs is None:
+            gdf = set_crs(gdf, crs)
+
+        elif gdf.crs != crs:
+            gdf = reproject_gdf(gdf,crs)
+        return gdf
+
+def geometry_to_gdf(geometry, crs):
         """
         Create GeoDataFrame from a (multi)polygon.
         Parameters
@@ -17,10 +52,10 @@ def geometry_to_gdf(self, geometry, crs):
         """
         #check that incomming geometry is valid
         if not geometry.is_valid:
-            print('The geometry is invalid')
+            raise ValueError('The geometry is invalid')
         #check that the geometry is a polygon or multipolygon
         if not isinstance(geometry, (Polygon, MultiPolygon)):
-            print('The geometry must be a shapely.geometry.Polygon or shapely.geometry.MultiPolygon')
+            raise ValueError('The geometry must be a shapely.geometry.Polygon or shapely.geometry.MultiPolygon')
     
         #create gdf from the incomming geometry
 
@@ -29,42 +64,69 @@ def geometry_to_gdf(self, geometry, crs):
         gdf = gdf.rename(columns={0:'geometry'})
 
         if gdf.crs is None:
-            gdf = self.set_crs(gdf, crs)
+            gdf = set_crs(gdf, crs)
 
-        elif gdf.crs != self.crs:
-            gdf = self.reproject_gdf(gdf,crs)
+        elif gdf.crs != crs:
+            gdf = reproject_gdf(gdf,crs)
 
         return gdf
 
-def set_crs(gdf):
-    """
-    Set CRS in GeoDataFrame when current projection is not defined.
-    Parameters
-    ----------
-    gdf : geopandas.GeoDataFrame
-        the geodataframe to set the projection
-    Returns
-    -------
-    gdf : geopandas.GeoDataFrame
-        the geodataframe with the projection defined """
-    gdf = gdf.set_crs(default_crs)
-    return gdf
+def generate_manifest(geometry, tiles):
+    
+    """Generates a gedodataframe manifest to keep track of the osm retrieving process.
+        Parameters
+        ----------
+        geometry : geopandas.GeoDataFrame
+            the GeoDataFrame to be projected
+        tiles : geopandas.GeoDataFrame 
+            tiles geodataframe to be intersected with the incomming geometry.
+            if None, it will produce a manifest just for the incomming geometry.
+        Returns
+        ----------
+        manifest : geopandas.GeoDataFrame
+            manifest geodataframe"""
+
+    geom_tiles = gpd.sjoin(tiles, geometry, how='left', op='intersects',  lsuffix='tiles', rsuffix='geom')
+
+    ## Keep only intersecting tile geoms
+    manifest = geom_tiles[pd.notna(geom_tiles.geometry_geom)]
+    #add the tracking information
+    manifest['exclude'] = 0
+    manifest['exported'] = 0
+    manifest['uploaded'] = 0
+
+    return manifest
+
+def set_crs(gdf, crs):
+        """
+        Set CRS in GeoDataFrame when current projection is not defined.
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            the geodataframe to set the projection
+        Returns
+        -------
+        gdf : geopandas.GeoDataFrame
+            the geodataframe with the projection defined """
+        gdf = gdf.set_crs(crs)
+        
+        return gdf
     
 def reproject_gdf(gdf,to_crs):
-    """Project a GeoDataFrame from its current CRS to another.
-    Parameters
-    ----------
-    gdf : geopandas.GeoDataFrame
-        the GeoDataFrame to be projected
-    to_crs : string 
-        CRS to project the geodataframe
-    Returns
-    ----------
-    gdf_proj : geopandas.GeoDataFrame
-        the projected GeoDataFrame"""
-    
-    gdf_proj = gdf.to_crs(epsg=to_crs)
-    return gdf_proj
+        """Project a GeoDataFrame from its current CRS to another.
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            the GeoDataFrame to be projected
+        to_crs : string 
+            CRS to project the geodataframe
+        Returns
+        ----------
+        gdf_proj : geopandas.GeoDataFrame
+            the projected GeoDataFrame"""
+
+        gdf_proj = gdf.to_crs(epsg=to_crs)
+        return gdf_proj
 
 
 # import requests

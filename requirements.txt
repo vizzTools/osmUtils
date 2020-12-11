@@ -1,0 +1,7 @@
+pandas
+geopandas
+requests
+shapely
+
+# import libraries for test
+datatest
