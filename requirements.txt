@@ -2,6 +2,10 @@ pandas
 geopandas
 requests
 shapely
+os
+datetime
+time
+json
 
 # import libraries for test
 datatest
