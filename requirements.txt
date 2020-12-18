@@ -1,0 +1,11 @@
+pandas
+geopandas>=0.8.1
+requests
+shapely>=1.7.1
+os
+datetime
+time
+json
+
+# import libraries for test
+datatest

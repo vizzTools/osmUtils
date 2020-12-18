@@ -1,12 +1,15 @@
 # Standard library imports
 import sys
 
-# PyPackage_template imports
-from PyPackage_template import vizzuality
-from PyPackage_template import viewer
+# osmUtilstemplate imports
+from osmUtils import vizzuality
+from osmUtils import viewer
 
 
 def main():
+    """
+    This runs from the CLI
+    """
     if len(sys.argv) > 1:
         vizz = vizzuality.Vizz(sys.argv[1])
         viewer.show(vizz.name)
