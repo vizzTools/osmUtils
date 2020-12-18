@@ -1,12 +1,12 @@
 """ General util fucntion for retrieving osm from the Overpass API"""
 import os
 import requests
-import datetime as dt
+import json
 import time
-from shapely.geometry import LineString,  box, Polygon, MultiPolygon
 import geopandas as gpd
 import pandas as pd
-import json
+import datetime as dt
+from shapely.geometry import LineString,  box, Polygon, MultiPolygon
 #from shapely.geometry import mapping, shape, box,
 
 def generate_filter(osm_type):
@@ -27,6 +27,8 @@ def generate_filter(osm_type):
         '[!"tunnel"]["area"!="yes"]["highway"!~"cycleway|footway|path|pedestrian|steps|track|corridor|' \
         'elevator|escalator|proposed|bridleway|abandoned|platform"]'
     )
+    filters['none'] = ''
+
     #todo: add more filters
     if osm_type in filters:
         osm_filter = filters[osm_type]

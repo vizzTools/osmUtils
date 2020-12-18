@@ -1,10 +1,10 @@
 
 """General utility functions."""
-from .settings import DEFAULT_CRS, DEFAULT_TILES
 import geopandas as gpd
 import pandas as pd
 import mercantile as mt
 from shapely.geometry import shape, MultiPolygon, Polygon
+from .settings import DEFAULT_CRS, DEFAULT_TILES
 
 def generate_tiles(crs, zoom):
         """
