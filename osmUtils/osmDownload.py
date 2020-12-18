@@ -1,5 +1,5 @@
-from utils_osm import generate_filter, retrieve_osmData
-from settings import DEFAULT_PATH
+from utils_osm import generate_filter, retrieve_osm, generate_osm_gdf
+from settings import DEFAULT_PATH, DEFAULT_TIMEOUT, DEFAULT_OVERPASS_ENDPOINT
 
 class OsmDownload:
     """
@@ -7,10 +7,10 @@ class OsmDownload:
     
     Parameters
     ----------
-    manifest: geopandas.GeoDataFrame
-            manifest geodataframe.
+    geometry: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+        geographic boundaries to fetch geometries within
     osm_type: string
-        type of filter to retieve if custom_filter is None (e.g 'all_roads)
+        type of filter to retieve if custom_filter is None (e.g 'all_roads')
     infrastructure: string
         infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
     custom_filter: string
@@ -18,11 +18,13 @@ class OsmDownload:
         
     Returns
     -------
+    osmData: geopandas.GeoDataFrame
+        response retrieved from overpass api in a geopandas.GeoDataFrame
     
     """
-    def __init__(self, manifest,  osm_type, infrastructure, custom_filter=None, output_path=None):
+    def __init__(self, geometry,  osm_type, infrastructure, custom_filter=None, output_path=None):
 
-        self.manifest = manifest
+        self.geometry = geometry
         self.infrastructure = infrastructure
         self.osm_type = None
 
@@ -35,7 +37,8 @@ class OsmDownload:
             self.filter = self.get_filter()
         else:
             self.filter = custom_filter
-        self.osmData = self.get_osmData()
+        self.osm_json = self.get_osm_json()
+        self.osm_gdf = self.get_osm_gdf()
         
 
             
@@ -48,7 +51,10 @@ class OsmDownload:
         osm_filter = generate_filter(osm_type=self.osm_type)
         return osm_filter
 
-    def get_osmData(self):
-        osmData_manifest = retrieve_osmData(manifest=self.manifest, infrastructure = self.infrastructure, osm_filter= self.filter, path=self.output_path)
+    def get_osm_json(self):
+        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, infrastructure=self.infrastructure, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT)
         #note:we could add the format output. ATM i'm working with csv
-        return osmData_manifest
+        return osm_json
+    def get_osm_gdf(self):
+        gdf = generate_osm_gdf(response_json=self.osm_json)
+        return gdf

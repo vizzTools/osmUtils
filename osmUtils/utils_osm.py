@@ -3,11 +3,11 @@ import os
 import requests
 import datetime as dt
 import time
-from shapely.geometry import LineString, box
+from shapely.geometry import LineString,  box, Polygon, MultiPolygon
 import geopandas as gpd
 import pandas as pd
 import json
-from shapely.geometry import mapping, shape, box
+#from shapely.geometry import mapping, shape, box,
 
 def generate_filter(osm_type):
     """
@@ -19,7 +19,8 @@ def generate_filter(osm_type):
         {'all_roads'}
     Returns
     -------
-    string
+    osm_filter: string
+        filter to be used in the overpass API query
     """
     filters = dict()
     filters['all_roads'] = (
@@ -92,7 +93,8 @@ def overpass_request(
         the timeout interval for the requests library
     Returns
     -------
-    dict
+    response_json: dict
+
     """
     url = overpass_endpoint.rstrip('/') + '/interpreter'
 
@@ -130,14 +132,56 @@ def get_coordinate_string(geometry):
     """
     Extract exterior coordinates from polygon(s) to pass to OSM in a query by
     polygon. Ignore the interior ("holes") coordinates. Round to 6 places.
+
+    Parameters
+    -----------
+    geometry: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+        geographic boundaries to fetch geometries within
+    Return
+    ------
+    polygon_coord_str: str
+        polygon coordinates in string format which is needed for the overpass API query
+
     """
-    x, y = geometry.exterior.xy
-    coords = list(zip(x, y))
-    return ' '.join([f'{xy[1]:.6f} {xy[0]:.6f}' for xy in coords])
+
+    # extract the exterior coordinates of the geometry to pass to the API later
+    polygons_coords = []
+    if isinstance(geometry, Polygon):
+        x, y = geometry.exterior.xy
+        polygons_coords.append(list(zip(x, y)))
+    elif isinstance(geometry, MultiPolygon):
+        for polygon in geometry:
+            x, y = polygon.exterior.xy
+            polygons_coords.append(list(zip(x, y)))
+    else:
+        print('Geometry must be a shapely Polygon or MultiPolygon')
+
+    # convert the exterior coordinates of the polygon(s) to the string format
+    # the API expects
+    polygon_coord_strs = []
+    for coords in polygons_coords:
+        s = ''
+        separator = ' '
+        for coord in list(coords):
+            # round floating point lats and longs to 6 decimal places (ie, ~100 mm),
+            # so we can hash and cache strings consistently
+            s = f'{s}{separator}{coord[1]:.6f}{separator}{coord[0]:.6f}'
+        polygon_coord_strs.append(s.strip(separator))
+
+    return polygon_coord_strs
 
 def OSM_response_to_lines(response_json):
     """
     Parse Overpass API json response to extract ways as linestrings
+    Parameters
+    ----------
+    response_json: dict
+        response retrieved from the overpass API
+    Returns
+    -------
+    geoms: shapely.geometry.LineString
+        line strings from retrieved nodes
+
     """
     if not 'elements' in response_json:
         print("No elements in response!")
@@ -159,6 +203,7 @@ def OSM_response_to_lines(response_json):
     ########
     # TODO: Add simplification logic here
     #  e.g. remove duplicate points, etc.
+    # TODO: Add cleaning for polygons
     try:
         geoms = []
         for way_nodes in ways.values():
@@ -172,6 +217,18 @@ def OSM_response_to_lines(response_json):
     return geoms
 
 def cut_geom(polygon, N):
+    """
+    Cut geometry in n*2n parts
+    Parameters
+    ----------
+    polygon: shapely.geometry.Polygon
+        polygon to be splitted in n*n parts
+    n: int
+        number of parts to split the input geometry
+    Retunrs
+    -------
+    intersected_feats: shapely.geometry.MultiPolygon
+        """
     # Get bounds of grid
     lon_end,lat_start,lon_start,lat_end = polygon.bounds
     print(lon_end,lat_start,lon_start,lat_end)
@@ -205,200 +262,291 @@ def cut_geom(polygon, N):
         
     return intersected_feats
 
-def get_cut_dfs(multi_pol, infrastructure, filters):
-    """
-    Iterates over a cutted geometry and retrieves the cutted parts
-    Parameters
-    ----------
-    multi_pol: 
-    Returns
-    --------
+# def get_cut_dfs(multi_pol, infrastructure, filters):
+#     """
+#     Iterates over a cutted geometry and retrieves the cutted parts
+#     Parameters
+#     ----------
+#     multi_pol: 
+#     Returns
+#     --------
 
-    """
-    list_dfs = []
-    for geom in multi_pol:
-        response_json = download_OSM(geom, infrastructure, filters)
-        try:
-            if len(response_json) and response_json['elements']:
-                print('Respose_recieved...')
-                    ## Create graph and convert of GeoDataFrame
-                try:
-                    geoms = OSM_response_to_lines(response_json)
-                    #df = get_Lines_gdf(G)
-                    if geoms:
-                        df = gpd.GeoDataFrame(geometry=geoms)
-                        list_dfs.append(df)
-                except:
-                    print('Fail generation of graph... No response')
-        except:
-            if (response_json==None) or ('remark' in response_json):
-                print('response retrieved...')
-                multi_pol = cut_geom(geom, 2)
-                sublist_dfs = get_cut_dfs(multi_pol,infrastructure, filters)
-                list_dfs.append(sublist_dfs)
-            else:
-                print('There is no data for this tile')
-    #try:         
-    #    gdf = pd.concat(list_dfs)
-    #except:
-    #    print('no objects to concatenate')
-    #    gdf = None
-    #
-    return list_dfs
+#     """
+#     list_dfs = []
+#     for geom in multi_pol:
+#         response_json = download_OSM(geom, infrastructure, filters)
+#         try:
+#             if len(response_json) and response_json['elements']:
+#                 print('Respose_recieved...')
+#                     ## Create graph and convert of GeoDataFrame
+#                 try:
+#                     geoms = OSM_response_to_lines(response_json)
+#                     #df = get_Lines_gdf(G)
+#                     if geoms:
+#                         df = gpd.GeoDataFrame(geometry=geoms)
+#                         list_dfs.append(df)
+#                 except:
+#                     print('Fail generation of graph... No response')
+#         except:
+#             if (response_json==None) or ('remark' in response_json):
+#                 print('response retrieved...')
+#                 multi_pol = cut_geom(geom, 2)
+#                 sublist_dfs = get_cut_dfs(multi_pol,infrastructure, filters)
+#                 list_dfs.append(sublist_dfs)
+#             else:
+#                 print('There is no data for this tile')
+#     #try:         
+#     #    gdf = pd.concat(list_dfs)
+#     #except:
+#     #    print('no objects to concatenate')
+#     #    gdf = None
+#     #
+#     return list_dfs
 
 
 def download_OSM(
-    polygon,
+    geometry,
     infrastructure,
     filters='',
     timeout=180,
     overpass_endpoint='http://overpass-api.de/api'
 ):
     """
-    Query Overpass API and parse response to a list of LineString(s)
+    Request to Overpass API
+    Parameters
+    ----------
+    geometry: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+        geographic boundaries to fetch geometries within
+    infrastructure: string
+        infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
+    filters: string
+        filter to be used in the query for retrieving osm data from the overpass API
+    timeout: int
+        the timeout interval for the requests library
+    overpass_enpoint: string
+    Retunrs
+    -------
+    response_json: dict
+        response retrived from the overpass API
     """
-    polygon_coord_str = get_coordinate_string(polygon)
+    if not geometry.is_valid:
+        print('Shape does not have a valid geometry')
+    if not isinstance(geometry, (Polygon, MultiPolygon)):
+        print('Geometry must be a shapely Polygon or MultiPolygon.')
+        
+    geometry_coord_str = get_coordinate_string(geometry)
+    print('Geometry coordines converted into string')
     overpass_settings = f'[out:json][timeout:{timeout}]'
     
-    # Query string in Overpass QL
-    # Essetially look for everything that matches 
-    #  `infrastructure` and `filters`
-    #  within `poly`
-    #  selecting children with `>`
-    query_str = f'{overpass_settings};({infrastructure}{filters}(poly:"{polygon_coord_str}");>;);out;'
     try:
-        
-        response_json = overpass_request(
-            query_str, 
-            timeout=timeout, 
-            overpass_endpoint=overpass_endpoint
-        )
+        response_json = []
+        for polygon_coord_str in geometry_coord_str:
+            print(polygon_coord_str)
+            query_str = f'{overpass_settings};({infrastructure}{filters}(poly:"{polygon_coord_str}");>;);out;'
+            print(query_str)
+            print(f'Requesting data within polygon from API in {len(polygon_coord_str)} request(s)')
+            response_j = overpass_request(
+                        query_str, 
+                        timeout=timeout, 
+                        overpass_endpoint=overpass_endpoint
+                    )
+            response_json.append(response_j)
     except:
-        
         response_json = None
     return response_json
 
-def retrieve_osmData(manifest, osm_filter, infrastructure,  path):
+def retrieve_osm(geometry, osm_filter, infrastructure, timeout=180, overpass_endpoint='http://overpass-api.de/api'):
     """
-    Download OSM ways and nodes within a given geometry from the Overpass API.
+    Retrieves OSM data within a given geometry from the Overpass API.
     
     Parameters
     ----------
-    manifest: geopandas.GeoDataFrame
-            manifest geodataframe.
-    osm_type: string
-        type of filter to retieve if custom_filter is None
+    geometry: shapely.geometry.Polygon
+        geographic boundaries to fetch geometries within
+    osm_filter: string
+        filter to use for retieve data from the overpass API
     infrastructure: string
         infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
-    custom_filter: string
-        a custom filter to be used instead of the already defined in the osm_type
+    timeout = 
+        the timeout interval for the HTTP request. Set to 180 by default.
+    overpass_endpoint: string
+        API endpoint to use for the overpass queries
         
     Returns
     -------
+    osmData: geojson
+            response retrieved from overpass API
+
+    """
+    print(f"\nFetching OSM")
+    response_json = download_OSM(geometry, infrastructure=infrastructure, filters=osm_filter)
+    try:
+        if ('remark' not in response_json) and (len(response_json['elements']) == 0):
+            print(f'No actual data retrieved')
+        elif len(response_json) and response_json['elements']>0:
+            print(f'Data retrieve succesfully!')
+    except:
+        if (response_json == None) or ('remark' in response_json):
+            print(f'Cutting the geometry ...')
+            multi_pol = cut_geom(geometry, 2)
+            response_json = download_OSM(multi_pol, infrastructure=infrastructure, filters=osm_filter)
+            #list_dfs = get_cut_dfs(multi_pol, infrastructure=infrastructure,filters=osm_filter)
+        else:
+            print(f'No data retrieved!')
+    return response_json
+
+def generate_osm_gdf(response_json):
+    """
+    Generate GeoDataFrame from a response retrieved from the overpass API
+    
+    Parameters
+    ----------
+    response_json: list
+        list with the response retrieved from the overpass API
+    
+    Return
+    ------
+    osm_gdf: geopandas.GeoDataFrame
+        response from overpass API in geopandas.GeoDataFrame format
     
     """
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f'new directory successfully created it {path}')
+    list_gdfs = []
+    for el in response_json:
+        geoms = OSM_response_to_lines(el)
+        if geoms:
+            gdf = gpd.GeoDataFrame(geometry=geoms)
+            list_gdfs.append(gdf)
+    try:
+        osm_gdf = pd.concat(list_gdfs)
+    except:
+        osm_gdf = None
+        print('Dataframe concatenation failed!')
+    return osm_gdf
+
+
+    ## TODO - Add in CollectionOsm
+
+    # def retrieve_osmData(manifest, osm_filter, infrastructure,  path):
+    # """
+    # Download OSM ways and nodes within a given geometry from the Overpass API.
     
-    tiles_to_process = manifest[manifest.exclude == 0]
-
-    #once all the tiles have been processed the tiles_to_process will be 0
-    print(f'Tiles to process: {len(tiles_to_process), len(manifest)}')
+    # Parameters
+    # ----------
+    # manifest: geopandas.GeoDataFrame
+    #         manifest geodataframe.
+    # osm_type: string
+    #     type of filter to retieve if custom_filter is None
+    # infrastructure: string
+    #     infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
+    # custom_filter: string
+    #     a custom filter to be used instead of the already defined in the osm_type
+        
+    # Returns
+    # -------
     
-    for i in range(0, len(tiles_to_process)):
-        print(f"{round(100*i/len(tiles_to_process),2)}%")
-        entry = tiles_to_process.iloc[i]
+    # """
+    # if not os.path.exists(path):
+    #     os.makedirs(path)
+    #     print(f'new directory successfully created it {path}')
+    
+    # tiles_to_process = manifest[manifest.exclude == 0]
 
-        tile_id = entry['id']
-        polygon = entry['geometry']
+    # #once all the tiles have been processed the tiles_to_process will be 0
+    # print(f'Tiles to process: {len(tiles_to_process), len(manifest)}')
+    
+    # for i in range(0, len(tiles_to_process)):
+    #     print(f"{round(100*i/len(tiles_to_process),2)}%")
+    #     entry = tiles_to_process.iloc[i]
 
-        # need to define the storage of the retrieved tiles
-        export = True
-        #upload = True
-        successful_export = True if entry['exported'] == 1 else False
-        #successful_upload = True if entry['uploaded'] == 1 else False
-        exclude = True if entry['exclude'] == 1 else False
+    #     tile_id = entry['id']
+    #     polygon = entry['geometry']
 
-        # If exclude (i.e. no roads), dont export or upload
-        #if exclude or all([successful_export, successful_upload]):
-        if exclude or successful_export: 
-            export = False
-            #upload = False
+    #     # need to define the storage of the retrieved tiles
+    #     export = True
+    #     #upload = True
+    #     successful_export = True if entry['exported'] == 1 else False
+    #     #successful_upload = True if entry['uploaded'] == 1 else False
+    #     exclude = True if entry['exclude'] == 1 else False
 
-         # If already exported, dont export again
-        #elif successful_export and not successful_upload:
-        #    export = False
-        #    upload = True
+    #     # If exclude (i.e. no roads), dont export or upload
+    #     #if exclude or all([successful_export, successful_upload]):
+    #     if exclude or successful_export: 
+    #         export = False
+    #         #upload = False
 
-        if export:
-            print(f"\nFetching OSM for {tile_id.replace('_', '/')}\n")
-            response_json = download_OSM(polygon,infrastructure=infrastructure,filters=osm_filter)
+    #      # If already exported, dont export again
+    #     #elif successful_export and not successful_upload:
+    #     #    export = False
+    #     #    upload = True
 
-            #print(f'response status: {response_json.status_code}, lenght of response: {len(response_json)}')
+    #     if export:
+    #         print(f"\nFetching OSM for {tile_id.replace('_', '/')}\n")
+    #         response_json = download_OSM(polygon,infrastructure=infrastructure,filters=osm_filter)
+
+    #         #print(f'response status: {response_json.status_code}, lenght of response: {len(response_json)}')
             
-            try:
-                if ('remark' not in response_json) and (len(response_json['elements']) == 0):
-                    print(f'No actual data in {tile_id}')
+    #         try:
+    #             if ('remark' not in response_json) and (len(response_json['elements']) == 0):
+    #                 print(f'No actual data in {tile_id}')
 
-                elif len(response_json) and response_json['elements']>0:
-                    print(f'Data retrieve for {tile_id}')
-                    ## Create graph and convert of GeoDataFrame
-                    geoms = OSM_response_to_lines(response_json)
-                    #df = get_Lines_gdf(G)
-                    if geoms:
-                        df = gpd.GeoDataFrame(geometry=geoms)
-                        #df.to_file(f'out.shp')
+    #             elif len(response_json) and response_json['elements']>0:
+    #                 print(f'Data retrieve for {tile_id}')
+    #                 ## Create graph and convert of GeoDataFrame
+    #                 geoms = OSM_response_to_lines(response_json)
+    #                 #df = get_Lines_gdf(G)
+    #                 if geoms:
+    #                     df = gpd.GeoDataFrame(geometry=geoms)
+    #                     #df.to_file(f'out.shp')
 
-                    ## Attempt temporary LOCAL export
-                    try:
-                        df.to_csv(f'{path}/{tile_id}.csv', index=False)
-                        successful_export = True
-                        print('successful exported!')
+    #                 ## Attempt temporary LOCAL export
+    #                 try:
+    #                     df.to_csv(f'{path}/{tile_id}.csv', index=False)
+    #                     successful_export = True
+    #                     print('successful exported!')
 
-                    except:
-                        print('Local export failed')
-                        print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
-                        exclude = False
-                # else:
-                #     print(f"\nGeneration of graph failed! Excluding {tile_id.replace('_', '/')}, no graph produced\n")
-                #     exclude = True
-            except:
-                # print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
-                # exclude = True
-                if (response_json == None) or ('remark' in response_json):
-                    print(f'Cutting the geometry of {tile_id}...')
-                    multi_pol = cut_geom(polygon, 2)
-                    list_dfs = get_cut_dfs(multi_pol, infrastructure=infrastructure,filters=osm_filter)
-                    try:
-                        df = pd.concat(list_dfs)
-                    except:
-                        df = None
-                        print('Dataframe concatenation failed!')
-                    if df is not None:
-                        print('Exporting df...')
-                        df.to_csv(f'{path}/{tile_id}.csv', index=False)
-                        successful_export = True
-                        print('successful exported!')
-                    else:
-                        print('No data retrieved')
-                        successful_export = False
-                        print('Tile excluded!')
-                        exclude =True
-                else:
-                    print(f'No data for {tile_id}')
-                    print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
-                    print('Tile excluded!')
-                    exclude = True
+    #                 except:
+    #                     print('Local export failed')
+    #                     print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
+    #                     exclude = False
+    #             # else:
+    #             #     print(f"\nGeneration of graph failed! Excluding {tile_id.replace('_', '/')}, no graph produced\n")
+    #             #     exclude = True
+    #         except:
+    #             # print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
+    #             # exclude = True
+    #             if (response_json == None) or ('remark' in response_json):
+    #                 print(f'Cutting the geometry of {tile_id}...')
+    #                 multi_pol = cut_geom(polygon, 2)
+    #                 list_dfs = get_cut_dfs(multi_pol, infrastructure=infrastructure,filters=osm_filter)
+    #                 try:
+    #                     df = pd.concat(list_dfs)
+    #                 except:
+    #                     df = None
+    #                     print('Dataframe concatenation failed!')
+    #                 if df is not None:
+    #                     print('Exporting df...')
+    #                     df.to_csv(f'{path}/{tile_id}.csv', index=False)
+    #                     successful_export = True
+    #                     print('successful exported!')
+    #                 else:
+    #                     print('No data retrieved')
+    #                     successful_export = False
+    #                     print('Tile excluded!')
+    #                     exclude =True
+    #             else:
+    #                 print(f'No data for {tile_id}')
+    #                 print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
+    #                 print('Tile excluded!')
+    #                 exclude = True
 
 
 
                 
-        ## Update manifest
-        index = manifest.index[manifest.id == tile_id].tolist()[0]
-        manifest.at[index, 'exclude'] = 1 if exclude else 0
-        manifest.at[index, 'exported'] = 1 if successful_export else 0  
-        #manifest.at[index, 'uploaded'] = 1 if successful_upload else 0
+    #     ## Update manifest
+    #     index = manifest.index[manifest.id == tile_id].tolist()[0]
+    #     manifest.at[index, 'exclude'] = 1 if exclude else 0
+    #     manifest.at[index, 'exported'] = 1 if successful_export else 0  
+    #     #manifest.at[index, 'uploaded'] = 1 if successful_upload else 0
         
-        return manifest
+    #     return manifest
 
