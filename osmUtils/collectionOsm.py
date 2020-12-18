@@ -33,12 +33,8 @@ class CollectionOsm:
     def __init__(self, geometry=None, zoom=5, crs=None, geom_tiles=True):
         
         self.zoom = zoom
-        if crs is None:
-            self.crs = DEFAULT_CRS
-        else:
-            self.crs = crs
+        self.crs = crs or DEFAULT_CRS 
         self.tiles = None
-     
         self.geometry = geometry or Polygon(DEFAULT_COORDS)
         self.geom_tiles = geom_tiles
 
@@ -49,26 +45,63 @@ class CollectionOsm:
         #generate manifest
         self.manifest = self.get_manifest()
 
-        
-            
-        #else:
-        #    #generate manifest for inserted geom
-        #    print('todo')
-            
-    #def __repr__(self):
-    #    return 'yes'
-    #
         #methods
         
     def get_tiles_gdf(self):
+        """
+        Generate tiles for a determined zoom level.
+
+        Parameters
+        ---------
+        crs: string
+            coordinate system for the output tiles
+        zoom: int
+            zoom level for the generation of tiles
+
+        Returns
+        --------
+        gdf: geopandas.GeoDataFrame
+        """
         gdf = generate_tiles(crs=self.crs, zoom=self.zoom)
         return gdf
     
     def get_geom_gdf(self):
+        """
+        Parse input geometry to geopandas.GeoDataFrame
+
+        Parameters
+        -----------
+        geometry: shapely.geometry.Polygon or shapely.geometry.Multipolygon
+            geometry to parse into a geopandas.GeoDataFrame
+        crs: string
+            coordinate system for the output file
+
+        Returns
+        -------
+        gdf: geopandas.GeoDataFrame
+        
+        """
         gdf = geometry_to_gdf(geometry=self.geometry, crs=self.crs)
         return gdf
     
     def get_manifest(self):
+        """
+        Generates geopandas.GeoDataFrame for tracking the osm retrieving process
+
+        Parameters
+        ----------
+        geometry: geopandas.GeoDataFrame
+            geometry parsed in a geopandas.GeoDataFrame
+        tiles: geopandas.GeoDataFrame
+            tiles parsed in a geopandas.GeoDataFrame
+        geom_tiles: bool
+            if True the manifest will be generated for the tile geometry. False will provide the
+            manifest for the input geometry.
+            
+        Returns
+        --------
+        manifest: geopandas.GeoDataFrame
+            """
         manifest = generate_manifest(geometry=self.geometry_gdf, tiles=self.tiles_gdf, geom_tiles=self.geom_tiles)
         return manifest
         
