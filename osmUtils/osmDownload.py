@@ -22,7 +22,7 @@ class OsmDownload:
         response retrieved from overpass api in a geopandas.GeoDataFrame
     
     """
-    def __init__(self, geometry,  osm_type='none', infrastructure='way["highway'], custom_filter=None, output_path=None):
+    def __init__(self, geometry,  osm_type='none', infrastructure='way["highway"]', custom_filter=None, output_path=None):
 
         self.geometry = geometry
         self.infrastructure = infrastructure
