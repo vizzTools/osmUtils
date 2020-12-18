@@ -3,8 +3,8 @@ import setuptools
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
-with oepn('README.md'. 'r') as fh:
-    long_description = fh.read()
+with open('README.md', 'r') as fh:
+    README = fh.read()
 
 # # The text of the README file
 # README = (HERE / "README.md").read_text()
@@ -26,7 +26,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.7",
         "Operating System :: OS Independent",
     ],
-    packages=['osmUtils],
+    packages=['osmUtils'],
     install_requires=['requests>=2.2.0', 'folium==0.8.3'],
     entry_points={
         "console_scripts": [
