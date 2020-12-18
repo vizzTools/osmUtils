@@ -1,6 +1,6 @@
 
 """General utility functions."""
-from settings import DEFAULT_CRS, DEFAULT_TILES
+from .settings import DEFAULT_CRS, DEFAULT_TILES
 import geopandas as gpd
 import pandas as pd
 import mercantile as mt

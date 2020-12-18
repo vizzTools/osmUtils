@@ -1,5 +1,5 @@
-from utils_osm import generate_filter, retrieve_osm, generate_osm_gdf
-from settings import DEFAULT_PATH, DEFAULT_TIMEOUT, DEFAULT_OVERPASS_ENDPOINT
+from .utils_osm import generate_filter, retrieve_osm, generate_osm_gdf
+from .settings import DEFAULT_PATH, DEFAULT_TIMEOUT, DEFAULT_OVERPASS_ENDPOINT
 
 class OsmDownload:
     """

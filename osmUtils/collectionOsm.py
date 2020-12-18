@@ -1,9 +1,9 @@
 #import requests
 import geopandas as gpd
 import pandas as pd
-from utils_geo import generate_tiles, geometry_to_gdf, generate_manifest
+from .utils_geo import generate_tiles, geometry_to_gdf, generate_manifest
 from shapely.geometry import shape, MultiPolygon, Polygon
-from settings import DEFAULT_CRS, DEFAULT_COORDS
+from .settings import DEFAULT_CRS, DEFAULT_COORDS
 
 #save manifest as wkt to reduce size of manifest
 
