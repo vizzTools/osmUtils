@@ -24,7 +24,7 @@ def generate_filter(osm_type):
     """
     filters = dict()
     filters['all_roads'] = (
-        '[!"tunnel"]["area"!="yes"]["highway"!~"cycleway|footway|path|pedestrian|steps|track|corridor|' \
+        'way["highway"][!"tunnel"]["area"!="yes"]["highway"!~"cycleway|footway|path|pedestrian|steps|track|corridor|' \
         'elevator|escalator|proposed|bridleway|abandoned|platform"]'
     )
     filters['none'] = ''
@@ -308,7 +308,6 @@ def cut_geom(polygon, N):
 
 def download_OSM(
     geometry,
-    infrastructure,
     filters='',
     timeout=180,
     overpass_endpoint='http://overpass-api.de/api'
@@ -344,7 +343,7 @@ def download_OSM(
         response_json = []
         for polygon_coord_str in geometry_coord_str:
             print(polygon_coord_str)
-            query_str = f'{overpass_settings};({infrastructure}{filters}(poly:"{polygon_coord_str}");>;);out;'
+            query_str = f'{overpass_settings};({filters}(poly:"{polygon_coord_str}");>;);out;'
             print(query_str)
             print(f'Requesting data within polygon from API in {len(polygon_coord_str)} request(s)')
             response_j = overpass_request(
@@ -357,7 +356,7 @@ def download_OSM(
         response_json = None
     return response_json
 
-def retrieve_osm(geometry, osm_filter, infrastructure, timeout=180, overpass_endpoint='http://overpass-api.de/api'):
+def retrieve_osm(geometry, osm_filter, timeout=180, overpass_endpoint='http://overpass-api.de/api'):
     """
     Retrieves OSM data within a given geometry from the Overpass API.
     
@@ -381,17 +380,17 @@ def retrieve_osm(geometry, osm_filter, infrastructure, timeout=180, overpass_end
 
     """
     print(f"\nFetching OSM")
-    response_json = download_OSM(geometry, infrastructure=infrastructure, filters=osm_filter)
+    response_json = download_OSM(geometry, filters=osm_filter)
     try:
-        if ('remark' not in response_json) and (len(response_json['elements']) == 0):
+        if ('remark' not in response_json) and (len(response_json[0]['elements']) == 0):
             print(f'No actual data retrieved')
-        elif len(response_json) and response_json['elements']>0:
+        elif len(response_json) and (len(response_json[0]['elements'])>0):
             print(f'Data retrieve succesfully!')
     except:
         if (response_json == None) or ('remark' in response_json):
             print(f'Cutting the geometry ...')
             multi_pol = cut_geom(geometry, 2)
-            response_json = download_OSM(multi_pol, infrastructure=infrastructure, filters=osm_filter)
+            response_json = download_OSM(multi_pol, filters=osm_filter)
             #list_dfs = get_cut_dfs(multi_pol, infrastructure=infrastructure,filters=osm_filter)
         else:
             print(f'No data retrieved!')

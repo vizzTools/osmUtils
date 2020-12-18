@@ -11,8 +11,6 @@ class OsmDownload:
         geographic boundaries to fetch geometries within
     osm_type: string
         type of filter to retieve if custom_filter is None (e.g 'all_roads')
-    infrastructure: string
-        infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
     custom_filter: string
         a custom filter to be used instead of the already defined in the osm_type
         
@@ -22,10 +20,9 @@ class OsmDownload:
         response retrieved from overpass api in a geopandas.GeoDataFrame
     
     """
-    def __init__(self, geometry,  osm_type='none', infrastructure='way["highway"]', custom_filter=None, output_path=None):
+    def __init__(self, geometry,  osm_type='none', custom_filter=None, output_path=None):
 
         self.geometry = geometry
-        self.infrastructure = infrastructure
         self.output_path = output_path or DEFAULT_PATH
 
         self.osm_type = None
@@ -65,9 +62,7 @@ class OsmDownload:
             geographic boundaries to fetch geometries within
         osm_filter: string
             filter to use for retieve data from the overpass API
-        infrastructure: string
-            infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
-        timeout = 
+        timeout: int
             the timeout interval for the HTTP request. Set to 180 by default.
         overpass_endpoint: string
             API endpoint to use for the overpass queries. Default set to 'http://overpass-api.de/api'
@@ -77,7 +72,7 @@ class OsmDownload:
         osmData: geojson
                 response retrieved from overpass API
                 """
-        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, infrastructure=self.infrastructure, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT)
+        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT)
         #note:we could add the format output. ATM i'm working with csv
         return osm_json
     def get_osm_gdf(self):
