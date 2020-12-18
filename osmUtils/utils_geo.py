@@ -59,7 +59,7 @@ def geometry_to_gdf(geometry, crs):
     
         #create gdf from the incomming geometry
 
-        gdf = gpd.GeoDataFrame([geometry])
+        gdf = gpd.GeoDataFrame(geometry)
         gdf = gdf.set_geometry(0)
         gdf = gdf.rename(columns={0:'geometry'})
 
