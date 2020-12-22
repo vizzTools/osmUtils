@@ -1,6 +1,6 @@
 # Open Street Map Interface
 
-Interfaces with overpass API and retrieved Open Street Map (OSM) data.
+Interfaces with [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API/Language_Guide) and retrieves Open Street Map (OSM) data.
 
 ## Developing
 
@@ -12,5 +12,4 @@ Environment variables required:
 
 - `PRODUCTION_TOKEN`
 - `STAGING_TOKEN`
-
 
