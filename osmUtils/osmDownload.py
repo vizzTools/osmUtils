@@ -10,7 +10,7 @@ class OsmDownload:
     geometry: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
         geographic boundaries to fetch geometries within
     osm_type: string
-        type of filter to retieve if custom_filter is None (e.g 'all_roads')
+        type of filter to retieve if custom_filter is None (e.g 'all_roads',  'river', 'none')
     custom_filter: string
         a custom filter to be used instead of the already defined in the osm_type
         
@@ -43,7 +43,7 @@ class OsmDownload:
         Parameters
         ----------
         osm_type: string
-            {'all_roads'}
+            {'all_roads', 'river', 'none'}
         Returns
         -------
         osm_filter: string
