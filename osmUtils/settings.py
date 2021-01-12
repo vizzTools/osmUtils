@@ -12,7 +12,6 @@ DEFAULT_TIMEOUT=180
 DEFAULT_OVERPASS_ENDPOINT='http://overpass-api.de/api'
 
 #default setting for the folium visualization
-DEFAULT_BOUNDS=[45.5, -122.3]
 DEFAULT_ZOOM_START = 10
 DEFAULT_BASEMAP = 'cartodbdark_matter'
 DEFAULT_COLOR = '#f7f5b5'

@@ -2,17 +2,21 @@
 import folium
 import json
 from .utils_geo import set_crs
+from shapely.geometry import box
+from .settings import DEFAULT_ZOOM_START, DEFAULT_BASEMAP, DEFAULT_COLOR
 
-def generate_folium_map(bounds, gdf, zoom_start, basemap, color):
+
+def generate_folium_map(gdf, kwargs):
     """
     Visualize geopandas.GeoDataFrame with folium.
     
     Parameters
     ----------
-    bounds: tuple or list
-        Latitude and Longitude of Marker (Northing, Easting). If None, it will be set to [45.5, -122.3]
     gdf: geopandas.GeoDataFrame
         GeoDataFrame to be visualized with folium
+
+    **kwargs
+    ---------
     zoom_start: int
         Initial zoom level for the map. If Nne, default level set to 10.
     basemap: string
@@ -25,9 +29,17 @@ def generate_folium_map(bounds, gdf, zoom_start, basemap, color):
     """
     gdf_projected = set_crs(gdf=gdf, crs='EPSG:3857')
     gjson = get_gjson(gdf_projected)
-    if len(bounds)>2:
-        raise ValueError(f'Two element expected in bounds - Latitude and Longitude of Map (Northing, Easting)')
-    folium_map = folium.Map([ bounds[0], bounds[1]],
+
+    bounds = bounds = list(gdf.bounds.iloc[0])
+    geom = box(bounds[0], bounds[1], bounds[2], bounds[3])
+
+
+    zoom_start=kwargs['zoom_start'] if 'zoom_start' in kwargs else DEFAULT_ZOOM_START
+    basemap=kwargs['basemap'] if 'basemap' in kwargs else DEFAULT_BASEMAP
+    color=kwargs['color'] if 'color' in kwargs else DEFAULT_COLOR
+
+
+    folium_map = folium.Map([geom.centroid.y, geom.centroid.x],
                   zoom_start=zoom_start,
                   tiles=basemap)
     style_function = lambda x: {'color': color, 'weight':1, 'opacity':1}
