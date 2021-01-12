@@ -3,7 +3,8 @@
 import geopandas as gpd
 import pandas as pd
 import mercantile as mt
-from shapely.geometry import shape, MultiPolygon, Polygon
+import folium
+from shapely.geometry import shape, MultiPolygon, Polygon, box
 from .settings import DEFAULT_CRS, DEFAULT_TILES
 
 def generate_tiles(crs, zoom):
@@ -90,11 +91,7 @@ def generate_manifest(geometry, tiles, geom_tiles):
 
     ## Keep only intersecting tile geoms
     manifest = geom_tiles_gdf[pd.notna(geom_tiles_gdf.geometry_geom)]
-    #add the tracking information
-    manifest['exclude'] = 0
-    manifest['exported'] = 0
-    manifest['uploaded'] = 0
-
+    manifest['exclude'], manifest['exported'], manifest['uploaded'] = [0, 0, 0]
 
     if geom_tiles:
         manifest = manifest.drop_duplicates(subset=['geometry_tiles'])
@@ -139,3 +136,33 @@ def reproject_gdf(gdf,to_crs):
 
         gdf_proj = gdf.to_crs(epsg=to_crs)
         return gdf_proj
+
+## move to utils_graph
+def generate_folium_choropleth_map(gdf):
+    """
+    Visualize geopandas.GeoDataFrame with folium.
+    
+    Parameters
+    ----------
+    gdf: geopandas.GeoDataFrame
+        GeoDataFrame to be visualized with folium
+    Returns
+    -------
+    folium_map : folium.folium.Map
+    """
+    bounds = list(gdf.bounds.iloc[0])
+    geom = box(bounds[0], bounds[1], bounds[2], bounds[3])
+
+    location = [geom.centroid.y, geom.centroid.x]
+    folium_map = folium.Map(location,
+                  zoom_start=11,
+                  tiles='cartodbdark_matter')
+    folium.Choropleth(geo_data=gdf).add_to(folium_map)
+    folium.LayerControl().add_to(folium_map)
+    return folium_map
+
+def get_html_iframe(folium_map):
+    """
+    Generate html iframe of the folium map
+    """
+    return folium_map._repr_html_()

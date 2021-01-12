@@ -1,7 +1,7 @@
 #import requests
 import geopandas as gpd
 import pandas as pd
-from .utils_geo import generate_tiles, geometry_to_gdf, generate_manifest
+from .utils_geo import generate_tiles, geometry_to_gdf, generate_manifest, generate_folium_choropleth_map, get_html_iframe
 from shapely.geometry import shape, MultiPolygon, Polygon
 from .settings import DEFAULT_CRS, DEFAULT_COORDS
 
@@ -44,8 +44,11 @@ class CollectionOsm:
             
         #generate manifest
         self.manifest = self.get_manifest()
+        self.vizzualise = self.get_choropleth_map()
 
         #methods
+    def _repr_html_(self):
+        return get_html_iframe(self.vizzualise)
         
     def get_tiles_gdf(self):
         """
@@ -104,4 +107,8 @@ class CollectionOsm:
             """
         manifest = generate_manifest(geometry=self.geometry_gdf, tiles=self.tiles_gdf, geom_tiles=self.geom_tiles)
         return manifest
+
+    def get_choropleth_map(self):
+        folium_map = generate_folium_choropleth_map(gdf=self.manifest)
+        return folium_map
         
