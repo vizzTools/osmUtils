@@ -24,12 +24,12 @@ class OsmVisualize:
     folium_map : folium.folium.Map
     
     """
-    def __init__(self, gdf,**kwargs):
+    def __init__(self, gdf, **kwargs):
         self.gdf = gdf
-        self.kwargs= kwargs
+        self.kwargs = kwargs
         self.foilum_map = self.get_map()
 
-        #methods
+    # methods
     def _repr_html_(self):
         return get_html_iframe(self.foilum_map)
 
