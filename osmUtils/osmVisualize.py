@@ -33,7 +33,7 @@ class OsmVisualize:
     def _repr_html_(self):
         return get_html_iframe(self.foilum_map)
 
-    def get_map(self):
+    def get_map(self, path='index.html'):
         """
         Visualize geopandas.GeoDataFrame with folium.
     
@@ -52,5 +52,5 @@ class OsmVisualize:
         folium_map : folium.folium.Map
         """
         m = generate_folium_map(gdf= self.gdf, kwargs=self.kwargs)
-        return embed_map(m)
+        return embed_map(m, path)
 

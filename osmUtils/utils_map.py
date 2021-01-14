@@ -65,11 +65,13 @@ def get_gjson(gdf):
     gjson = gdf.to_json()
     return gjson
 
-def embed_map(m):
-    """Resolves Folium rendering in chrome+Jupyter issue"""
+def embed_map(m, path):
+    """Resolves Folium rendering in chrome+Jupyter issue by saving to local path"""
     from IPython.display import IFrame
-    m.save('index.html')
-    return IFrame('index.html', width='100%', height='750px')
+    if '.html' not in path: path += '.html'
+    
+    m.save(path)
+    return IFrame(path, width='100%', height='750px')
 
 def get_html_iframe(folium_map):
     """
