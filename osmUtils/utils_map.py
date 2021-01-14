@@ -27,26 +27,35 @@ def generate_folium_map(gdf, kwargs):
     -------
     folium_map : folium.folium.Map
     """
-    gdf_projected = set_crs(gdf=gdf, crs='EPSG:3857')
-    gjson = get_gjson(gdf_projected)
 
-    bounds = bounds = list(gdf.bounds.iloc[0])
+    gdf_projected = set_crs(gdf=gdf, crs='EPSG:3857')
+    gjson_str = get_gjson(gdf_projected)
+    gjson = json.loads(gjson_str)
+
+    zoom_start=kwargs.get('zoom_start',  DEFAULT_ZOOM_START)
+    basemap=kwargs.get('basemap', DEFAULT_BASEMAP)
+    color=kwargs.get('color', DEFAULT_COLOR)
+    max_features = kwargs.get('max_features',None)
+    max_index = (max_features and max_features <= len(gjson['features'])) or len(gjson['features'])
+    features = gjson['features'][:max_index]
+
+    bounds = list(gdf.bounds.iloc[0])
     geom = box(bounds[0], bounds[1], bounds[2], bounds[3])
 
+    m = folium.Map(
+                location = [geom.centroid.y, geom.centroid.x],
+                zoom_start=zoom_start,
+                tiles=basemap
+                )
 
-    zoom_start=kwargs['zoom_start'] if 'zoom_start' in kwargs else DEFAULT_ZOOM_START
-    basemap=kwargs['basemap'] if 'basemap' in kwargs else DEFAULT_BASEMAP
-    color=kwargs['color'] if 'color' in kwargs else DEFAULT_COLOR
 
-
-    folium_map = folium.Map([geom.centroid.y, geom.centroid.x],
-                  zoom_start=zoom_start,
-                  tiles=basemap)
     style_function = lambda x: {'color': color, 'weight':1, 'opacity':1}
-    points = folium.features.GeoJson(gjson, style_function=style_function)
-    folium_map.add_child(points)
+    folium.GeoJson({
+        "type":"FeatureCollection",
+        "features": features
+    }, style_function=style_function).add_to(m)
 
-    return folium_map
+    return m
 
 
 def get_gjson(gdf):
@@ -55,6 +64,12 @@ def get_gjson(gdf):
     """
     gjson = gdf.to_json()
     return gjson
+
+def embed_map(m):
+    """Resolves Folium rendering in chrome+Jupyter issue"""
+    from IPython.display import IFrame
+    m.save('index.html')
+    return IFrame('index.html', width='100%', height='750px')
 
 def get_html_iframe(folium_map):
     """

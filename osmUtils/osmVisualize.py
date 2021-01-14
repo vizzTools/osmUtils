@@ -1,4 +1,4 @@
-from .utils_map import generate_folium_map, get_html_iframe
+from .utils_map import generate_folium_map, get_html_iframe, embed_map
 
 
 
@@ -51,6 +51,6 @@ class OsmVisualize:
         -------
         folium_map : folium.folium.Map
         """
-        folium_map = generate_folium_map(gdf= self.gdf, kwargs=self.kwargs)
-        return folium_map
+        m = generate_folium_map(gdf= self.gdf, kwargs=self.kwargs)
+        return embed_map(m)
 
