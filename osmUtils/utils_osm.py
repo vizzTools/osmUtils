@@ -16,7 +16,7 @@ def generate_filter(osm_type):
     Parameters
     ----------
     osm_type: string
-        {'all_roads'}
+        {'all_roads', 'river', 'none'}, 
     Returns
     -------
     osm_filter: string
@@ -27,6 +27,7 @@ def generate_filter(osm_type):
         'way["highway"][!"tunnel"]["area"!="yes"]["highway"!~"cycleway|footway|path|pedestrian|steps|track|corridor|' \
         'elevator|escalator|proposed|bridleway|abandoned|platform"]'
     )
+    filters['river'] = ('way["waterway"="river"]')
     filters['none'] = ''
 
     #todo: add more filters
