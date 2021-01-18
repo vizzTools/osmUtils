@@ -5,7 +5,7 @@ import pandas as pd
 import mercantile as mt
 import folium
 from shapely.geometry import shape, MultiPolygon, Polygon, box
-from .settings import DEFAULT_CRS, DEFAULT_TILES
+from .settings import DEFAULT_CRS, DEFAULT_TILES, DEFAULT_BASEMAP, DEFAULT_ZOOM_START
 
 def generate_tiles(crs, zoom):
         """
@@ -155,8 +155,8 @@ def generate_folium_choropleth_map(gdf):
 
     location = [geom.centroid.y, geom.centroid.x]
     folium_map = folium.Map(location,
-                  zoom_start=11,
-                  tiles='cartodbdark_matter')
+                  zoom_start=DEFAULT_ZOOM_START,
+                  tiles=DEFAULT_BASEMAP)
     folium.Choropleth(geo_data=gdf).add_to(folium_map)
     folium.LayerControl().add_to(folium_map)
     return folium_map

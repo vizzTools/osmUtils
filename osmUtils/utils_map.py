@@ -78,3 +78,19 @@ def get_html_iframe(folium_map):
     Generate html iframe of the folium map
     """
     return folium_map._repr_html_()
+
+def html_box(item):
+    """Returns an HTML block with template strings filled-in based on item attributes."""
+    is_osmSave = str(type(item)) == "<class 'osmUtils.osmDownload.SavetoFile'>"
+    is_osmDownload = str(type(item)) == "<class 'osmUtils.osmDownload.OsmDownload'>"
+    if is_osmSave:
+        html_str ='OSM data saved successfully to local file!'
+    if is_osmDownload:
+        html_str = 'OSM data retrieved successfully from the overpass API'
+    
+    html = ("<div class='item_container' style='height: auto; overflow: hidden; border: 3px solid #2BA4A0;"
+        "border-radius: 2px; background: #fff; line-height: 1.21429em; padding: 10px;'>"
+        f"<h2 style='color: #2BA4A0;'>{html_str}</h2></li>"
+        "</div> </div>")
+
+    return html

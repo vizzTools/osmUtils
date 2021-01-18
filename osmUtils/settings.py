@@ -7,11 +7,12 @@ DEFAULT_COORDS = [(-180,-85), (180, -85), (180, 85), (-180, 85), (-180, -85)]
 
 
 #default settings for rertrieving osm data from the overpass API
-DEFAULT_PATH = './osm_data'
+DEFAULT_PATH = './osm_data.shp'
+DEFAULT_DRIVER = 'ESRI Shapefile'
 DEFAULT_TIMEOUT=180
 DEFAULT_OVERPASS_ENDPOINT='http://overpass-api.de/api'
 
 #default setting for the folium visualization
 DEFAULT_ZOOM_START = 10
-DEFAULT_BASEMAP = 'cartodbdark_matter'
-DEFAULT_COLOR = '#f7f5b5'
+DEFAULT_BASEMAP = 'cartodbpositron'
+DEFAULT_COLOR = '#8c9191'
