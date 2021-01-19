@@ -7,6 +7,7 @@ import geopandas as gpd
 import pandas as pd
 import datetime as dt
 from shapely.geometry import LineString,  box, Polygon, MultiPolygon
+from .settings import DEFAULT_PATH, DEFAULT_DRIVER
 #from shapely.geometry import mapping, shape, box,
 
 def generate_filter(osm_type):
@@ -28,6 +29,8 @@ def generate_filter(osm_type):
         'elevator|escalator|proposed|bridleway|abandoned|platform"]'
     )
     filters['river'] = ('way["waterway"="river"]')
+    filters['water_features'] = ('way["natural"="water"]')
+    filters['parks'] = ('way["leisure"="park"]')
     filters['none'] = ''
 
     #todo: add more filters
@@ -424,6 +427,27 @@ def generate_osm_gdf(response_json):
         osm_gdf = None
         print('Dataframe concatenation failed!')
     return osm_gdf
+
+def _to_file(gdf, filename, driver):
+    """
+    Save response geogapdas.GeoDataFrame to local file
+    
+    Parameters
+    ----------
+    gdf: geopandas.GeoDataFrame
+        response from overpass API in geopandas.GeoDataFrame format
+    output_path: string
+        File path or file handle to write to.
+    driver : string, default: 'ESRI Shapefile'
+        The OGR format driver used to write the vector file.
+    """
+    # output_path = kwargs.get('output_path', DEFAULT_PATH)
+    # driver = kwargs.get('driver', DEFAULT_DRIVER)
+    if not os.path.exists('./data'):
+        os.makedirs('./data')
+    try:
+        gdf.to_file(f'./data/{filename}', driver=driver)
+    except: raise ValueError('Local export failed!')
 
 
     ## TODO - Add in CollectionOsm
