@@ -1,5 +1,7 @@
-from .utils_osm import generate_filter, retrieve_osm, generate_osm_gdf
-from .settings import DEFAULT_PATH, DEFAULT_TIMEOUT, DEFAULT_OVERPASS_ENDPOINT
+from .utils_osm import generate_filter, retrieve_osm, generate_osm_gdf, _to_file
+from .utils_map import html_box
+from .settings import DEFAULT_TIMEOUT, DEFAULT_OVERPASS_ENDPOINT, DEFAULT_PATH, DEFAULT_DRIVER
+
 
 class OsmDownload:
     """
@@ -34,6 +36,8 @@ class OsmDownload:
         self.osm_gdf = self.get_osm_gdf()
 
         #methods
+    def _repr_html_(self):
+        return html_box(item=self)
 
     def get_filter(self):
         """
@@ -74,6 +78,7 @@ class OsmDownload:
         osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT)
         #note:we could add the format output. ATM i'm working with csv
         return osm_json
+
     def get_osm_gdf(self):
         """
         Generate GeoDataFrame from a response retrieved from the overpass API
@@ -91,3 +96,36 @@ class OsmDownload:
         """
         gdf = generate_osm_gdf(response_json=self.osm_json)
         return gdf
+
+    def save_gdf_to_file(self, filename=DEFAULT_PATH, driver=DEFAULT_DRIVER):
+        """
+        Save response geogapdas.GeoDataFrame to local file
+        
+        Parameters
+        ----------
+        gdf: geopandas.GeoDataFrame
+            response from overpass API in geopandas.GeoDataFrame format
+        filename: string
+            File path or file handle to write to. Default: osm_data
+        driver : string, default: 'ESRI Shapefile'
+            The OGR format driver used to write the vector file.
+        """         
+        if driver == "ESRI Shapefile":
+            filename += ".shp"
+
+        elif driver == "GeoJSON":
+            filename += ".geojson"
+        
+        else:
+            raise ValueError(f'driver {driver} is not supported. Try with "ESRI Shapefile" or ""GeoJSON"')
+            
+        if not self.osm_gdf.empty:
+            try:
+                _to_file(gdf=self.osm_gdf, filename=filename, driver=driver)
+                self.filename = filename
+            except:
+                raise ValueError('Export gdf to file failed!')
+            
+        else:
+            raise ValueError('gdf does not exist. Try to generate gdf before saving.')
+
