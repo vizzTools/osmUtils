@@ -231,7 +231,7 @@ def cut_geom(polygon, N):
     Parameters
     ----------
     polygon: shapely.geometry.Polygon
-        polygon to be splitted in n*n parts
+        polygon to be split in n*n parts
     n: int
         number of parts to split the input geometry
     Retunrs
@@ -271,18 +271,20 @@ def cut_geom(polygon, N):
         
     return intersected_feats
 
-def get_cut_dfs(multi_pol, filters):
+def get_cut_dfs(polygon_list, filters):
     """
-    Iterates over a cutted geometry and retrieves the cutted parts
+    Iterates over a list of polygons and retrieves the OSM geometries that intersect with them.
+    Combines into a single GeoDataFrame.
+
     Parameters
     ----------
-    multi_pol: 
-    Returns
+    polygon_list: List of Shapely Polygons
+    Returns GeoDataFrame
     --------
 
     """
     list_dfs = []
-    for geom in multi_pol:
+    for geom in polygon_list:
         response_json = download_OSM(geom,filters)
         try:
             if len(response_json) and response_json['elements']:
@@ -299,8 +301,8 @@ def get_cut_dfs(multi_pol, filters):
         except:
             if (response_json==None) or ('remark' in response_json):
                 print('response retrieved...')
-                multi_pol = cut_geom(geom, 2)
-                sublist_dfs = get_cut_dfs(multi_pol, filters)
+                polygon_list = cut_geom(geom, 2)
+                sublist_dfs = get_cut_dfs(polygon_list, filters)
                 list_dfs.append(sublist_dfs)
             else:
                 print('There is no data for this tile')
