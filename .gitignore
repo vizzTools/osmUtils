@@ -131,3 +131,6 @@ dmypy.json
 
 # Maps
 index.html
+
+#folders and export data
+data/

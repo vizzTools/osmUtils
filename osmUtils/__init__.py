@@ -1,6 +1,6 @@
 #from .vizzuality import Vizz
 from .collectionOsm import CollectionOsm
-from .osmDownload import OsmDownload, SavetoFile
+from .osmDownload import OsmDownload
 from .osmVisualize import OsmVisualize
 from ._version import __version__
 

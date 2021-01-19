@@ -443,8 +443,10 @@ def _to_file(gdf, filename, driver):
     """
     # output_path = kwargs.get('output_path', DEFAULT_PATH)
     # driver = kwargs.get('driver', DEFAULT_DRIVER)
+    if not os.path.exists('./data'):
+        os.makedirs('./data')
     try:
-        gdf.to_file(filename, driver=driver)
+        gdf.to_file(f'./data/{filename}', driver=driver)
     except: raise ValueError('Local export failed!')
 
 
