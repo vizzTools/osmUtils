@@ -350,10 +350,10 @@ def download_OSM(
     
     try:
         response_json = []
-        for filter_ in filters:
+        for _filter in filters:
             for polygon_coord_str in geometry_coord_str:
                 print(polygon_coord_str)
-                query_str = f'{overpass_settings};({filter_}(poly:"{polygon_coord_str}");>;);out;'
+                query_str = f'{overpass_settings};({_filter}(poly:"{polygon_coord_str}");>;);out;'
                 print(query_str)
                 print(f'Requesting data within polygon from API in {len(polygon_coord_str)} request(s)')
                 response_j = overpass_request(
