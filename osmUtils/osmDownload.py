@@ -10,8 +10,8 @@ class OsmDownload:
     geometry: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
         geographic boundaries to fetch geometries within
     osm_type: string
-        type of filter to retieve if custom_filter is None (e.g 'all_roads',  'river', 'none')
-    custom_filter: string
+        type of filter to retieve if custom_filter is None (e.g 'all_roads', 'river', 'water_features', 'coastline', 'forest', 'buildings', 'parks', 'none')
+    custom_filter: list of strings
         a custom filter to be used instead of the already defined in the osm_type
         
     Returns
@@ -20,10 +20,9 @@ class OsmDownload:
         response retrieved from overpass api in a geopandas.GeoDataFrame
     
     """
-    def __init__(self, geometry,  osm_type='none', custom_filter=None, output_path=None):
+    def __init__(self, geometry,  osm_type='none', custom_filter=None):
 
         self.geometry = geometry
-        self.output_path = output_path or DEFAULT_PATH
 
         self.osm_type = None
         if custom_filter is None:
