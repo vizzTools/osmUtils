@@ -77,6 +77,7 @@ class OsmDownload:
         osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT)
         #note:we could add the format output. ATM i'm working with csv
         return osm_json
+
     def get_osm_gdf(self):
         """
         Generate GeoDataFrame from a response retrieved from the overpass API
@@ -95,30 +96,7 @@ class OsmDownload:
         gdf = generate_osm_gdf(response_json=self.osm_json)
         return gdf
 
-class SavetoFile:
-    """
-        Save response geogapdas.GeoDataFrame to local file
-        
-        Parameters
-        ----------
-        gdf: geopandas.GeoDataFrame
-            response from overpass API in geopandas.GeoDataFrame format
-        output_path: string
-            File path or file handle to write to.
-        driver : string, default: 'ESRI Shapefile'
-            The OGR format driver used to write the vector file.
-        """
-    def __init__(self ,gdf, filename='./osm_data.shp', driver="ESRI Shapefile", **kwargs):
-        self.gdf = gdf
-        self.filename = filename
-        self.driver = driver
-        self.kwargs = kwargs
-        self.save = self.save_gdf_to_file()
-
-    def _repr_html_(self):
-        return html_box(item=self)
-
-    def save_gdf_to_file(self, filename='./osm_data.shp', driver="ESRI Shapefile"):
+    def save_gdf_to_file(self, filename='./osm_data', driver="ESRI Shapefile"):
         """
         Save response geogapdas.GeoDataFrame to local file
         
@@ -130,7 +108,65 @@ class SavetoFile:
             File path or file handle to write to.
         driver : string, default: 'ESRI Shapefile'
             The OGR format driver used to write the vector file.
-        """
-        _to_file(gdf=self.gdf, filename='./osm_data.shp', driver="ESRI Shapefile")
-        return 'successfully exported!'
+        """            
+        if driver == "ESRI Shapefile":
+            filename += ".shp"
+
+        elif drive == "GeoJSON":
+            filename += ".geojson"
+        
+        else:
+            # error message 
+            
+        if self.gdf:
+            try:
+                _to_file(gdf=self.gdf, filename=filename, driver=driver)
+                self.filename = filename
+            except:
+                # unsuccessful message
+            
+        else:
+            # error msg
+
+
+            
+
+# class SavetoFile:
+#     """
+#         Save response geogapdas.GeoDataFrame to local file
+        
+#         Parameters
+#         ----------
+#         gdf: geopandas.GeoDataFrame
+#             response from overpass API in geopandas.GeoDataFrame format
+#         output_path: string
+#             File path or file handle to write to.
+#         driver : string, default: 'ESRI Shapefile'
+#             The OGR format driver used to write the vector file.
+#         """
+#     def __init__(self ,gdf, filename='./osm_data.shp', driver="ESRI Shapefile", **kwargs):
+#         self.gdf = gdf
+#         self.filename = filename
+#         self.driver = driver
+#         self.kwargs = kwargs
+#         self.save = self.save_gdf_to_file()
+
+#     def _repr_html_(self):
+#         return html_box(item=self)
+
+#     def save_gdf_to_file(self, filename='./osm_data.shp', driver="ESRI Shapefile"):
+#         """
+#         Save response geogapdas.GeoDataFrame to local file
+        
+#         Parameters
+#         ----------
+#         gdf: geopandas.GeoDataFrame
+#             response from overpass API in geopandas.GeoDataFrame format
+#         output_path: string
+#             File path or file handle to write to.
+#         driver : string, default: 'ESRI Shapefile'
+#             The OGR format driver used to write the vector file.
+#         """
+#         _to_file(gdf=self.gdf, filename='./osm_data.shp', driver="ESRI Shapefile")
+#         return 'successfully exported!'
 
