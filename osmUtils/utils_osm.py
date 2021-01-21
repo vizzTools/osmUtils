@@ -17,21 +17,24 @@ def generate_filter(osm_type):
     Parameters
     ----------
     osm_type: string
-        {'all_roads', 'river', 'none'}, 
+        {'all_roads', 'river', 'water_features', 'coastline', 'forest', 'buildings', 'parks', 'none'}, 
     Returns
     -------
     osm_filter: string
         filter to be used in the overpass API query
     """
     filters = dict()
-    filters['all_roads'] = (
+    filters['all_roads'] = [(
         'way["highway"][!"tunnel"]["area"!="yes"]["highway"!~"cycleway|footway|path|pedestrian|steps|track|corridor|' \
         'elevator|escalator|proposed|bridleway|abandoned|platform"]'
-    )
-    filters['river'] = ('way["waterway"="river"]')
-    filters['water_features'] = ('way["natural"="water"]')
-    filters['parks'] = ('way["leisure"="park"]')
-    filters['none'] = ''
+    )]
+    filters['river'] = [('way["waterway"="river"]')]
+    filters['water_features'] = ['way["natural"="water"]',  'relation["natural"="water"]']
+    filters['coastline'] = ['way["natural"="coastline"]']
+    filters['forest'] = ['way["landuse"="forest"]', 'relation["landuse"="forest"]']
+    filters['buildings'] = ['way["building"]', 'relation["building"]']
+    filters['parks'] = ['node["leisure"="park"]', 'way["leisure"="park"]', 'relation["leisure"="park"]']
+    filters['none'] = ['']
 
     #todo: add more filters
     if osm_type in filters:
@@ -228,7 +231,7 @@ def cut_geom(polygon, N):
     Parameters
     ----------
     polygon: shapely.geometry.Polygon
-        polygon to be splitted in n*n parts
+        polygon to be split in n*n parts
     n: int
         number of parts to split the input geometry
     Retunrs
@@ -268,46 +271,48 @@ def cut_geom(polygon, N):
         
     return intersected_feats
 
-# def get_cut_dfs(multi_pol, infrastructure, filters):
-#     """
-#     Iterates over a cutted geometry and retrieves the cutted parts
-#     Parameters
-#     ----------
-#     multi_pol: 
-#     Returns
-#     --------
+def get_cut_dfs(polygon_list, filters):
+    """
+    Iterates over a list of polygons and retrieves the OSM geometries that intersect with them.
+    Combines into a single GeoDataFrame.
 
-#     """
-#     list_dfs = []
-#     for geom in multi_pol:
-#         response_json = download_OSM(geom, infrastructure, filters)
-#         try:
-#             if len(response_json) and response_json['elements']:
-#                 print('Respose_recieved...')
-#                     ## Create graph and convert of GeoDataFrame
-#                 try:
-#                     geoms = OSM_response_to_lines(response_json)
-#                     #df = get_Lines_gdf(G)
-#                     if geoms:
-#                         df = gpd.GeoDataFrame(geometry=geoms)
-#                         list_dfs.append(df)
-#                 except:
-#                     print('Fail generation of graph... No response')
-#         except:
-#             if (response_json==None) or ('remark' in response_json):
-#                 print('response retrieved...')
-#                 multi_pol = cut_geom(geom, 2)
-#                 sublist_dfs = get_cut_dfs(multi_pol,infrastructure, filters)
-#                 list_dfs.append(sublist_dfs)
-#             else:
-#                 print('There is no data for this tile')
-#     #try:         
-#     #    gdf = pd.concat(list_dfs)
-#     #except:
-#     #    print('no objects to concatenate')
-#     #    gdf = None
-#     #
-#     return list_dfs
+    Parameters
+    ----------
+    polygon_list: List of Shapely Polygons
+    Returns GeoDataFrame
+    --------
+
+    """
+    list_dfs = []
+    for geom in polygon_list:
+        response_json = download_OSM(geom,filters)
+        try:
+            if len(response_json) and response_json['elements']:
+                print('Respose_recieved...')
+                    ## Create graph and convert of GeoDataFrame
+                try:
+                    geoms = OSM_response_to_lines(response_json)
+                    #df = get_Lines_gdf(G)
+                    if geoms:
+                        df = gpd.GeoDataFrame(geometry=geoms)
+                        list_dfs.append(df)
+                except:
+                    print('Fail generation of graph... No response')
+        except:
+            if (response_json==None) or ('remark' in response_json):
+                print('response retrieved...')
+                polygon_list = cut_geom(geom, 2)
+                sublist_dfs = get_cut_dfs(polygon_list, filters)
+                list_dfs.append(sublist_dfs)
+            else:
+                print('There is no data for this tile')
+    try:         
+       gdf = pd.concat(list_dfs)
+    except:
+       print('no objects to concatenate')
+       gdf = None
+    
+    return gdf
 
 
 def download_OSM(
@@ -345,17 +350,18 @@ def download_OSM(
     
     try:
         response_json = []
-        for polygon_coord_str in geometry_coord_str:
-            print(polygon_coord_str)
-            query_str = f'{overpass_settings};({filters}(poly:"{polygon_coord_str}");>;);out;'
-            print(query_str)
-            print(f'Requesting data within polygon from API in {len(polygon_coord_str)} request(s)')
-            response_j = overpass_request(
-                        query_str, 
-                        timeout=timeout, 
-                        overpass_endpoint=overpass_endpoint
-                    )
-            response_json.append(response_j)
+        for _filter in filters:
+            for polygon_coord_str in geometry_coord_str:
+                print(polygon_coord_str)
+                query_str = f'{overpass_settings};({_filter}(poly:"{polygon_coord_str}");>;);out;'
+                print(query_str)
+                print(f'Requesting data within polygon from API in {len(polygon_coord_str)} request(s)')
+                response_j = overpass_request(
+                            query_str, 
+                            timeout=timeout, 
+                            overpass_endpoint=overpass_endpoint
+                        )
+                response_json.append(response_j)
     except:
         response_json = None
     return response_json
@@ -394,8 +400,8 @@ def retrieve_osm(geometry, osm_filter, timeout=180, overpass_endpoint='http://ov
         if (response_json == None) or ('remark' in response_json):
             print(f'Cutting the geometry ...')
             multi_pol = cut_geom(geometry, 2)
-            response_json = download_OSM(multi_pol, filters=osm_filter)
-            #list_dfs = get_cut_dfs(multi_pol, infrastructure=infrastructure,filters=osm_filter)
+            #response_json = download_OSM(multi_pol, filters=osm_filter)
+            response_json = get_cut_dfs(multi_pol, filters=osm_filter)
         else:
             print(f'No data retrieved!')
     return response_json
