@@ -28,6 +28,7 @@ def generate_filter(osm_type):
         'way["highway"][!"tunnel"]["area"!="yes"]["highway"!~"cycleway|footway|path|pedestrian|steps|track|corridor|' \
         'elevator|escalator|proposed|bridleway|abandoned|platform"]'
     )]
+    filters['main_roads'] = [('way["highway"="primary"]')]
     filters['river'] = [('way["waterway"="river"]')]
     filters['water_features'] = ['way["natural"="water"]',  'relation["natural"="water"]']
     filters['coastline'] = ['way["natural"="coastline"]']
@@ -319,7 +320,8 @@ def download_OSM(
     geometry,
     filters='',
     timeout=180,
-    overpass_endpoint='http://overpass-api.de/api'
+    overpass_endpoint='http://overpass-api.de/api',
+    metadata=False
 ):
     """
     Request to Overpass API
@@ -353,7 +355,11 @@ def download_OSM(
         for _filter in filters:
             for polygon_coord_str in geometry_coord_str:
                 print(polygon_coord_str)
-                query_str = f'{overpass_settings};({_filter}(poly:"{polygon_coord_str}");>;);out;'
+                if metadata is False:
+                    query_str = f'{overpass_settings};({_filter}(poly:"{polygon_coord_str}");>;);out;'
+                elif metadata:
+                    query_str = f'{overpass_settings};({_filter}(poly:"{polygon_coord_str}"););out meta;>;out skel qt;'
+                print(query_str)
                 print(query_str)
                 print(f'Requesting data within polygon from API in {len(polygon_coord_str)} request(s)')
                 response_j = overpass_request(
@@ -366,7 +372,7 @@ def download_OSM(
         response_json = None
     return response_json
 
-def retrieve_osm(geometry, osm_filter, timeout=180, overpass_endpoint='http://overpass-api.de/api'):
+def retrieve_osm(geometry, osm_filter, timeout=180, overpass_endpoint='http://overpass-api.de/api', metadata=False):
     """
     Retrieves OSM data within a given geometry from the Overpass API.
     
@@ -390,7 +396,7 @@ def retrieve_osm(geometry, osm_filter, timeout=180, overpass_endpoint='http://ov
 
     """
     print(f"\nFetching OSM")
-    response_json = download_OSM(geometry, filters=osm_filter)
+    response_json = download_OSM(geometry, filters=osm_filter, metadata=metadata)
     try:
         if ('remark' not in response_json) and (len(response_json[0]['elements']) == 0):
             print(f'No actual data retrieved')

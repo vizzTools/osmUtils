@@ -75,7 +75,7 @@ class OsmDownload:
         osmData: geojson
                 response retrieved from overpass API
                 """
-        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT)
+        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=False)
         #note:we could add the format output. ATM i'm working with csv
         return osm_json
 
@@ -128,4 +128,9 @@ class OsmDownload:
             
         else:
             raise ValueError('gdf does not exist. Try to generate gdf before saving.')
+
+    def osm_metadata(self):
+         osm_json_metadata = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=True)
+         self.osm_json_metadata = osm_json_metadata
+        #note:we could add the format output. ATM i'm working with csv
 
