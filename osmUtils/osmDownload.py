@@ -130,7 +130,7 @@ class OsmDownload:
             raise ValueError('gdf does not exist. Try to generate gdf before saving.')
 
     def osm_metadata(self):
-         osm_json_metadata = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=True)
-         self.osm_json_metadata = osm_json_metadata
-        #note:we could add the format output. ATM i'm working with csv
+         self.osm_json_metadata = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=True)
+         
+        #note:we could add the osm_Daosm_Data_roadsta_roadsformat output. ATM i'm working with csv
 
