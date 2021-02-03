@@ -22,7 +22,7 @@ class OsmDownload:
         response retrieved from overpass api in a geopandas.GeoDataFrame
     
     """
-    def __init__(self, geometry,  osm_type='none', custom_filter=None):
+    def __init__(self, geometry,  osm_type='none', custom_filter=None, includes_metadata=False):
 
         self.geometry = geometry
 
@@ -32,7 +32,8 @@ class OsmDownload:
             self.filter = self.get_filter()
         else:
             self.filter = custom_filter
-        self.osm_json = self.get_osm_json()
+        self.includes_metadata = includes_medata
+        self.osm_json = self.get_osm_json() 
         self.osm_gdf = self.get_osm_gdf()
 
         #methods
@@ -75,7 +76,7 @@ class OsmDownload:
         osmData: geojson
                 response retrieved from overpass API
                 """
-        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=False)
+        osm_json = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=self.includes_metadata)
         #note:we could add the format output. ATM i'm working with csv
         return osm_json
 
@@ -94,7 +95,7 @@ class OsmDownload:
             response from overpass API in geopandas.GeoDataFrame format
         
         """
-        gdf = generate_osm_gdf(response_json=self.osm_json)
+        gdf = generate_osm_gdf(response_json=self.osm_json, metadata=self.includes_metadata)
         return gdf
 
     def save_gdf_to_file(self, filename=DEFAULT_PATH, driver=DEFAULT_DRIVER):
