@@ -17,7 +17,7 @@ def generate_filter(osm_type):
     Parameters
     ----------
     osm_type: string
-        {'all_roads', 'river', 'water_features', 'coastline', 'forest', 'buildings', 'parks', 'none'}, 
+        {'all_roads', 'main_roads', 'river', 'water_features', 'coastline', 'forest', 'buildings', 'parks', 'none'}, 
     Returns
     -------
     osm_filter: string
@@ -216,7 +216,9 @@ def OSM_response_to_lines(response_json):
     # TODO: Add cleaning for polygons
     try:
         geoms = []
-        for way_nodes in ways.values():
+        geoms_id = []
+        for id_, way_nodes in ways.items():
+            geoms_id.append(id_)
             try:
                 line_ = LineString([nodes_xy[n] for n in way_nodes])
                 geoms.append(line_)
@@ -224,7 +226,7 @@ def OSM_response_to_lines(response_json):
                 print(f'{way_nodes} failed!')
     except:
         geoms = None
-    return geoms
+    return geoms, geoms_id
 
 def cut_geom(polygon, N):
     """
@@ -412,7 +414,25 @@ def retrieve_osm(geometry, osm_filter, timeout=180, overpass_endpoint='http://ov
             print(f'No data retrieved!')
     return response_json
 
-def generate_osm_gdf(response_json):
+def get_metadata_gdf(response_metadata):
+    metadata = []
+    for response in response_metadata:
+        if not 'elements' in response:
+            print("No metadata in response!")
+        for el in response['elements']:
+            if el['type'] == 'way':
+                metadata.append(el)
+            elif el['type'] == 'node':
+                #we have already joined the nodes
+                pass
+    try:
+        gdf_metadata = gpd.GeoDataFrame(metadata)
+    except:
+        gdf_metadata =  None
+        raise ValueError('Metadata to gdf failed!. Returned empty gdf')
+    return gdf_metadata
+
+def generate_osm_gdf(response_json, metadata):
     """
     Generate GeoDataFrame from a response retrieved from the overpass API
     
@@ -429,15 +449,24 @@ def generate_osm_gdf(response_json):
     """
     list_gdfs = []
     for el in response_json:
-        geoms = OSM_response_to_lines(el)
+        geoms, geoms_id = OSM_response_to_lines(el)
         if geoms:
             gdf = gpd.GeoDataFrame(geometry=geoms)
+            gdf['id'] = geoms_id
             list_gdfs.append(gdf)
+
     try:
-        osm_gdf = pd.concat(list_gdfs)
+        body_gdf = pd.concat(list_gdfs)
     except:
-        osm_gdf = None
+        body_gdf = None
         print('Dataframe concatenation failed!')
+
+    if metadata is True: 
+        gdf_metadata = get_metadata_gdf(response_json)
+        osm_gdf = pd.merge(body_gdf, gdf_metadata, on="id")
+    else:
+        osm_gdf = body_gdf
+      
     return osm_gdf
 
 def _to_file(gdf, filename, driver):
@@ -460,131 +489,3 @@ def _to_file(gdf, filename, driver):
     try:
         gdf.to_file(f'./data/{filename}', driver=driver)
     except: raise ValueError('Local export failed!')
-
-
-    ## TODO - Add in CollectionOsm
-
-    # def retrieve_osmData(manifest, osm_filter, infrastructure,  path):
-    # """
-    # Download OSM ways and nodes within a given geometry from the Overpass API.
-    
-    # Parameters
-    # ----------
-    # manifest: geopandas.GeoDataFrame
-    #         manifest geodataframe.
-    # osm_type: string
-    #     type of filter to retieve if custom_filter is None
-    # infrastructure: string
-    #     infrastructure type that will be use to build the overpas api query (e.g. 'way["highway"]')
-    # custom_filter: string
-    #     a custom filter to be used instead of the already defined in the osm_type
-        
-    # Returns
-    # -------
-    
-    # """
-    # if not os.path.exists(path):
-    #     os.makedirs(path)
-    #     print(f'new directory successfully created it {path}')
-    
-    # tiles_to_process = manifest[manifest.exclude == 0]
-
-    # #once all the tiles have been processed the tiles_to_process will be 0
-    # print(f'Tiles to process: {len(tiles_to_process), len(manifest)}')
-    
-    # for i in range(0, len(tiles_to_process)):
-    #     print(f"{round(100*i/len(tiles_to_process),2)}%")
-    #     entry = tiles_to_process.iloc[i]
-
-    #     tile_id = entry['id']
-    #     polygon = entry['geometry']
-
-    #     # need to define the storage of the retrieved tiles
-    #     export = True
-    #     #upload = True
-    #     successful_export = True if entry['exported'] == 1 else False
-    #     #successful_upload = True if entry['uploaded'] == 1 else False
-    #     exclude = True if entry['exclude'] == 1 else False
-
-    #     # If exclude (i.e. no roads), dont export or upload
-    #     #if exclude or all([successful_export, successful_upload]):
-    #     if exclude or successful_export: 
-    #         export = False
-    #         #upload = False
-
-    #      # If already exported, dont export again
-    #     #elif successful_export and not successful_upload:
-    #     #    export = False
-    #     #    upload = True
-
-    #     if export:
-    #         print(f"\nFetching OSM for {tile_id.replace('_', '/')}\n")
-    #         response_json = download_OSM(polygon,infrastructure=infrastructure,filters=osm_filter)
-
-    #         #print(f'response status: {response_json.status_code}, lenght of response: {len(response_json)}')
-            
-    #         try:
-    #             if ('remark' not in response_json) and (len(response_json['elements']) == 0):
-    #                 print(f'No actual data in {tile_id}')
-
-    #             elif len(response_json) and response_json['elements']>0:
-    #                 print(f'Data retrieve for {tile_id}')
-    #                 ## Create graph and convert of GeoDataFrame
-    #                 geoms = OSM_response_to_lines(response_json)
-    #                 #df = get_Lines_gdf(G)
-    #                 if geoms:
-    #                     df = gpd.GeoDataFrame(geometry=geoms)
-    #                     #df.to_file(f'out.shp')
-
-    #                 ## Attempt temporary LOCAL export
-    #                 try:
-    #                     df.to_csv(f'{path}/{tile_id}.csv', index=False)
-    #                     successful_export = True
-    #                     print('successful exported!')
-
-    #                 except:
-    #                     print('Local export failed')
-    #                     print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
-    #                     exclude = False
-    #             # else:
-    #             #     print(f"\nGeneration of graph failed! Excluding {tile_id.replace('_', '/')}, no graph produced\n")
-    #             #     exclude = True
-    #         except:
-    #             # print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
-    #             # exclude = True
-    #             if (response_json == None) or ('remark' in response_json):
-    #                 print(f'Cutting the geometry of {tile_id}...')
-    #                 multi_pol = cut_geom(polygon, 2)
-    #                 list_dfs = get_cut_dfs(multi_pol, infrastructure=infrastructure,filters=osm_filter)
-    #                 try:
-    #                     df = pd.concat(list_dfs)
-    #                 except:
-    #                     df = None
-    #                     print('Dataframe concatenation failed!')
-    #                 if df is not None:
-    #                     print('Exporting df...')
-    #                     df.to_csv(f'{path}/{tile_id}.csv', index=False)
-    #                     successful_export = True
-    #                     print('successful exported!')
-    #                 else:
-    #                     print('No data retrieved')
-    #                     successful_export = False
-    #                     print('Tile excluded!')
-    #                     exclude =True
-    #             else:
-    #                 print(f'No data for {tile_id}')
-    #                 print(f"\nExcluding {tile_id.replace('_', '/')}, no graph produced\n")
-    #                 print('Tile excluded!')
-    #                 exclude = True
-
-
-
-                
-    #     ## Update manifest
-    #     index = manifest.index[manifest.id == tile_id].tolist()[0]
-    #     manifest.at[index, 'exclude'] = 1 if exclude else 0
-    #     manifest.at[index, 'exported'] = 1 if successful_export else 0  
-    #     #manifest.at[index, 'uploaded'] = 1 if successful_upload else 0
-        
-    #     return manifest
-

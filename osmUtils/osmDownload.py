@@ -12,9 +12,11 @@ class OsmDownload:
     geometry: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
         geographic boundaries to fetch geometries within
     osm_type: string
-        type of filter to retieve if custom_filter is None (e.g 'all_roads', 'river', 'water_features', 'coastline', 'forest', 'buildings', 'parks', 'none')
+        type of filter to retieve if custom_filter is None (e.g 'all_roads', 'main_roads', 'river', 'water_features', 'coastline', 'forest', 'buildings', 'parks', 'none')
     custom_filter: list of strings
         a custom filter to be used instead of the already defined in the osm_type
+    includes_metadata: bool
+        if True the json response will contain the metadata for each way and node. Default is False
         
     Returns
     -------
@@ -32,7 +34,7 @@ class OsmDownload:
             self.filter = self.get_filter()
         else:
             self.filter = custom_filter
-        self.includes_metadata = includes_medata
+        self.includes_metadata = includes_metadata
         self.osm_json = self.get_osm_json() 
         self.osm_gdf = self.get_osm_gdf()
 
@@ -70,6 +72,9 @@ class OsmDownload:
             the timeout interval for the HTTP request. Set to 180 by default.
         overpass_endpoint: string
             API endpoint to use for the overpass queries. Default set to 'http://overpass-api.de/api'
+        metadata: bool
+        if True the json response will contain the metadata for each way and node. Default is False
+        
             
         Returns
         -------
@@ -130,8 +135,8 @@ class OsmDownload:
         else:
             raise ValueError('gdf does not exist. Try to generate gdf before saving.')
 
-    def osm_metadata(self):
-         self.osm_json_metadata = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=True)
+    # def osm_metadata(self):
+    #      self.osm_json_metadata = retrieve_osm(geometry=self.geometry, osm_filter=self.filter, timeout=DEFAULT_TIMEOUT, overpass_endpoint=DEFAULT_OVERPASS_ENDPOINT, metadata=True)
          
-        #note:we could add the osm_Daosm_Data_roadsta_roadsformat output. ATM i'm working with csv
+    #     #note:we could add the osm_Daosm_Data_roadsta_roadsformat output. ATM i'm working with csv
 
